@@ -1,9 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const SYSTEM_PROMPT = `You are a helpful assistant for a manager preparing for or reflecting on 1:1 meetings with direct reports. Your role is to help summarize notes, suggest follow-ups, or provide coaching insights based on meeting content. Be concise and direct.`;
 
-const COLORS = ["#CECBF6", "#9FE1CB", "#F5C4B3", "#B5D4F4", "#C0DD97", "#FAC775", "#F4C0D1"];
-const TEXT_COLORS = ["#3C3489", "#085041", "#712B13", "#0C447C", "#3B6D11", "#633806", "#72243E"];
+const COLORS = [
+  { bg: "#EEEDFE", text: "#3C3489" },
+  { bg: "#E1F5EE", text: "#085041" },
+  { bg: "#FAECE7", text: "#712B13" },
+  { bg: "#E6F1FB", text: "#0C447C" },
+  { bg: "#EAF3DE", text: "#27500A" },
+  { bg: "#FAEEDA", text: "#633806" },
+  { bg: "#FBEAF0", text: "#72243E" },
+];
 
 function getInitials(name) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
@@ -43,22 +50,307 @@ async function callClaude(messages) {
   return data.content?.[0]?.text || "";
 }
 
+const styles = {
+  app: {
+    display: "grid",
+    gridTemplateColumns: "260px 1fr",
+    minHeight: "100vh",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    fontSize: 14,
+    color: "#111",
+    background: "#fff",
+  },
+  sidebar: {
+    borderRight: "1px solid #e5e5e5",
+    background: "#fafafa",
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    position: "sticky",
+    top: 0,
+  },
+  sidebarHeader: {
+    padding: "20px 16px 12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: "1px solid #e5e5e5",
+  },
+  sidebarTitle: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#888",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+  },
+  iconBtn: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#888",
+    padding: "4px 6px",
+    borderRadius: 6,
+    display: "flex",
+    alignItems: "center",
+    fontSize: 16,
+  },
+  personList: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "8px",
+  },
+  personRow: (active) => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "8px 10px",
+    borderRadius: 8,
+    cursor: "pointer",
+    background: active ? "#fff" : "transparent",
+    border: active ? "1px solid #e5e5e5" : "1px solid transparent",
+  }),
+  avatar: (color) => ({
+    width: 32,
+    height: 32,
+    borderRadius: "50%",
+    background: color.bg,
+    color: color.text,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12,
+    fontWeight: 600,
+    flexShrink: 0,
+  }),
+  avatarLg: (color) => ({
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    background: color.bg,
+    color: color.text,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 15,
+    fontWeight: 600,
+    flexShrink: 0,
+  }),
+  main: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    overflow: "hidden",
+  },
+  mainHeader: {
+    padding: "20px 32px 16px",
+    borderBottom: "1px solid #e5e5e5",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    flexShrink: 0,
+  },
+  headerActions: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+  },
+  btn: {
+    fontSize: 13,
+    padding: "6px 14px",
+    border: "1px solid #e5e5e5",
+    borderRadius: 7,
+    background: "none",
+    cursor: "pointer",
+    color: "#111",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  btnPrimary: {
+    fontSize: 13,
+    padding: "6px 14px",
+    border: "1px solid #111",
+    borderRadius: 7,
+    background: "#111",
+    cursor: "pointer",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  btnGhost: {
+    fontSize: 13,
+    padding: "6px 10px",
+    border: "none",
+    borderRadius: 7,
+    background: "none",
+    cursor: "pointer",
+    color: "#888",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  meetingList: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "0 32px",
+  },
+  meetingRow: {
+    display: "grid",
+    gridTemplateColumns: "110px 1fr 20px",
+    alignItems: "start",
+    gap: 20,
+    padding: "16px 0",
+    borderBottom: "1px solid #f0f0f0",
+    cursor: "pointer",
+  },
+  emptyState: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    color: "#aaa",
+    fontSize: 14,
+  },
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    border: "1px solid #e5e5e5",
+    borderRadius: 8,
+    fontSize: 14,
+    background: "#fff",
+    color: "#111",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  textarea: {
+    width: "100%",
+    padding: "10px 14px",
+    border: "1px solid #e5e5e5",
+    borderRadius: 8,
+    fontSize: 14,
+    lineHeight: 1.7,
+    background: "#fff",
+    color: "#111",
+    resize: "vertical",
+    outline: "none",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+    boxSizing: "border-box",
+  },
+};
+
+function AddPersonForm({ onAdd, onCancel }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  return (
+    <div style={{ padding: "12px 16px", borderBottom: "1px solid #e5e5e5", background: "#fff" }}>
+      <input
+        autoFocus
+        value={name}
+        onChange={e => setName(e.target.value)}
+        placeholder="Name"
+        style={{ ...styles.input, marginBottom: 8 }}
+        onKeyDown={e => e.key === "Enter" && name.trim() && onAdd(name.trim(), role.trim())}
+      />
+      <input
+        value={role}
+        onChange={e => setRole(e.target.value)}
+        placeholder="Role (optional)"
+        style={{ ...styles.input, marginBottom: 10 }}
+        onKeyDown={e => e.key === "Enter" && name.trim() && onAdd(name.trim(), role.trim())}
+      />
+      <div style={{ display: "flex", gap: 6 }}>
+        <button style={styles.btnPrimary} onClick={() => name.trim() && onAdd(name.trim(), role.trim())}>Add</button>
+        <button style={styles.btnGhost} onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function MeetingDetail({ person, meeting, onBack, onDelete, onUpdate }) {
+  const color = COLORS[person.colorIdx];
+  const [notes, setNotes] = useState(meeting.notes);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => onUpdate(meeting.id, notes), 600);
+    return () => clearTimeout(t);
+  }, [notes]);
+
+  async function askClaude() {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true); setAiResponse("");
+    const context = `Meeting on ${formatDate(meeting.date)} with ${person.name}${person.role ? ` (${person.role})` : ""}:\n\n${notes}`;
+    try {
+      const text = await callClaude([{ role: "user", content: `${context}\n\n---\n\n${aiPrompt}` }]);
+      setAiResponse(text);
+    } catch { setAiResponse("Something went wrong. Please try again."); }
+    setAiLoading(false);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
+      <div style={styles.mainHeader}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button style={styles.iconBtn} onClick={onBack} aria-label="Back">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <div style={styles.avatarLg(color)}>{getInitials(person.name)}</div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 500 }}>{person.name}</div>
+            <div style={{ fontSize: 13, color: "#888" }}>{formatDate(meeting.date)}</div>
+          </div>
+        </div>
+        <button style={styles.btnGhost} onClick={() => { if (window.confirm("Delete this meeting?")) onDelete(meeting.id); }} aria-label="Delete meeting">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Delete
+        </button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          style={{ ...styles.textarea, minHeight: 240 }}
+          placeholder="Meeting notes…"
+        />
+
+        <div style={{ background: "#fafafa", border: "1px solid #e5e5e5", borderRadius: 10, padding: "16px 20px" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#888", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 10 }}>Ask Claude</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={aiPrompt}
+              onChange={e => setAiPrompt(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && askClaude()}
+              placeholder="Summarize action items, suggest follow-ups…"
+              style={{ ...styles.input, flex: 1 }}
+            />
+            <button style={styles.btnPrimary} onClick={askClaude} disabled={aiLoading || !aiPrompt.trim()}>
+              {aiLoading ? "Thinking…" : "Ask"}
+            </button>
+          </div>
+          {aiResponse && (
+            <div style={{ marginTop: 14, fontSize: 14, lineHeight: 1.7, color: "#333", whiteSpace: "pre-wrap" }}>{aiResponse}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [directs, setDirects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [view, setView] = useState("list"); // list | person | meeting
-  const [selectedMeeting, setSelectedMeeting] = useState(null);
+  const [selectedMeetingId, setSelectedMeetingId] = useState(null);
   const [addingPerson, setAddingPerson] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState("");
   const [addingMeeting, setAddingMeeting] = useState(false);
   const [meetingDate, setMeetingDate] = useState(new Date().toISOString().slice(0, 10));
   const [meetingNotes, setMeetingNotes] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState("");
-  const [aiPrompt, setAiPrompt] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const notesRef = useRef(null);
 
   useEffect(() => {
     loadFromStorage().then(data => {
@@ -72,235 +364,200 @@ export default function App() {
   }, [directs, loaded]);
 
   const selected = directs.find(d => d.id === selectedId);
+  const selectedMeeting = selected?.meetings.find(m => m.id === selectedMeetingId);
 
-  function addPerson() {
-    if (!newName.trim()) return;
+  function addPerson(name, role) {
     const colorIdx = directs.length % COLORS.length;
-    const person = { id: Date.now().toString(), name: newName.trim(), role: newRole.trim(), colorIdx, meetings: [] };
+    const person = { id: Date.now().toString(), name, role, colorIdx, meetings: [] };
     setDirects(prev => [...prev, person]);
-    setNewName(""); setNewRole(""); setAddingPerson(false);
+    setSelectedId(person.id);
+    setAddingPerson(false);
   }
 
   function deletePerson(id) {
+    if (!window.confirm("Remove this person and all their meetings?")) return;
     setDirects(prev => prev.filter(d => d.id !== id));
-    if (selectedId === id) { setSelectedId(null); setView("list"); }
+    if (selectedId === id) setSelectedId(null);
   }
 
   function addMeeting() {
     if (!meetingNotes.trim()) return;
-    const meeting = { id: Date.now().toString(), date: meetingDate, notes: meetingNotes.trim(), createdAt: new Date().toISOString() };
+    const meeting = { id: Date.now().toString(), date: meetingDate, notes: meetingNotes.trim() };
     setDirects(prev => prev.map(d => d.id === selectedId ? { ...d, meetings: [meeting, ...d.meetings] } : d));
-    setMeetingNotes(""); setMeetingDate(new Date().toISOString().slice(0, 10)); setAddingMeeting(false);
+    setMeetingNotes(""); setMeetingDate(new Date().toISOString().slice(0, 10));
+    setAddingMeeting(false);
+    setSelectedMeetingId(meeting.id);
   }
 
   function deleteMeeting(meetingId) {
     setDirects(prev => prev.map(d => d.id === selectedId ? { ...d, meetings: d.meetings.filter(m => m.id !== meetingId) } : d));
-    if (selectedMeeting?.id === meetingId) { setSelectedMeeting(null); setView("person"); }
+    setSelectedMeetingId(null);
   }
 
   function updateMeetingNotes(meetingId, notes) {
     setDirects(prev => prev.map(d => d.id === selectedId ? {
       ...d, meetings: d.meetings.map(m => m.id === meetingId ? { ...m, notes } : m)
     } : d));
-    setSelectedMeeting(prev => ({ ...prev, notes }));
   }
 
-  async function askClaude() {
-    if (!aiPrompt.trim()) return;
-    setAiLoading(true); setAiResponse("");
-    const context = selectedMeeting ? `Meeting on ${formatDate(selectedMeeting.date)} with ${selected.name} (${selected.role}):\n\n${selectedMeeting.notes}` : "";
-    try {
-      const text = await callClaude([{ role: "user", content: context ? `${context}\n\n---\n\n${aiPrompt}` : aiPrompt }]);
-      setAiResponse(text);
-    } catch { setAiResponse("Something went wrong. Please try again."); }
-    setAiLoading(false);
-  }
-
-  async function exportToGoogleDocs() {
+  function exportNotes() {
     if (!selected || selected.meetings.length === 0) return;
-    const content = selected.meetings.map(m =>
-      `## ${formatDate(m.date)}\n\n${m.notes}`
-    ).join("\n\n---\n\n");
-    const title = `1:1 Notes — ${selected.name}`;
-    const fullText = `# ${title}\n\n${content}`;
-    const blob = new Blob([fullText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${title.replace(/[^a-z0-9]/gi, "_")}.md`;
-    a.click(); URL.revokeObjectURL(url);
+    const content = selected.meetings.map(m => `## ${formatDate(m.date)}\n\n${m.notes}`).join("\n\n---\n\n");
+    const blob = new Blob([`# 1:1 Notes — ${selected.name}\n\n${content}`], { type: "text/plain" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `1-1_${selected.name.replace(/\s+/g, "_")}.md`; a.click();
   }
 
-  // VIEWS
-  if (view === "meeting" && selectedMeeting && selected) {
-    const color = COLORS[selected.colorIdx];
-    const tcolor = TEXT_COLORS[selected.colorIdx];
+  if (selected && selectedMeeting) {
     return (
-      <div style={{ padding: "1.5rem 0" }}>
-        <h2 className="sr-only">Meeting notes editor</h2>
-        <button onClick={() => { setView("person"); setAiResponse(""); setAiPrompt(""); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)", fontSize: 14, padding: 0, marginBottom: "1.5rem" }}>
-          <i className="ti ti-arrow-left" aria-hidden="true"></i> Back to {selected.name}
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1.5rem" }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 500, color: tcolor, flexShrink: 0 }}>{getInitials(selected.name)}</div>
-          <div>
-            <p style={{ margin: 0, fontWeight: 500, fontSize: 15 }}>{selected.name}</p>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>{formatDate(selectedMeeting.date)}</p>
+      <div style={styles.app}>
+        <div style={styles.sidebar}>
+          <div style={styles.sidebarHeader}>
+            <span style={styles.sidebarTitle}>Directs</span>
           </div>
-          <button onClick={() => { if (confirm("Delete this meeting?")) deleteMeeting(selectedMeeting.id); }} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-secondary)", padding: 4 }} aria-label="Delete meeting">
-            <i className="ti ti-trash" style={{ fontSize: 18 }} aria-hidden="true"></i>
-          </button>
+          <div style={styles.personList}>
+            {directs.map(d => (
+              <div key={d.id} style={styles.personRow(d.id === selectedId)} onClick={() => { setSelectedId(d.id); setSelectedMeetingId(null); }}>
+                <div style={styles.avatar(COLORS[d.colorIdx])}>{getInitials(d.name)}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>{d.meetings[0] ? `Last met ${formatDate(d.meetings[0].date)}` : "No meetings yet"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-
-        <textarea
-          value={selectedMeeting.notes}
-          onChange={e => updateMeetingNotes(selectedMeeting.id, e.target.value)}
-          style={{ width: "100%", minHeight: 220, fontSize: 15, lineHeight: 1.7, padding: "12px 14px", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", resize: "vertical", boxSizing: "border-box", fontFamily: "var(--font-sans)" }}
-          placeholder="Meeting notes..."
+        <MeetingDetail
+          person={selected}
+          meeting={selectedMeeting}
+          onBack={() => setSelectedMeetingId(null)}
+          onDelete={deleteMeeting}
+          onUpdate={updateMeetingNotes}
         />
-
-        <div style={{ marginTop: "1.5rem", background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem" }}>
-          <p style={{ margin: "0 0 10px", fontSize: 13, fontWeight: 500, color: "var(--color-text-secondary)" }}>Ask Claude about this meeting</p>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} onKeyDown={e => e.key === "Enter" && askClaude()} placeholder="E.g. summarize action items, suggest follow-ups…" style={{ flex: 1, fontSize: 14 }} />
-            <button onClick={askClaude} disabled={aiLoading || !aiPrompt.trim()} style={{ whiteSpace: "nowrap" }}>
-              {aiLoading ? "Thinking…" : "Ask ↗"}
-            </button>
-          </div>
-          {aiResponse && (
-            <div style={{ marginTop: 12, fontSize: 14, lineHeight: 1.7, color: "var(--color-text-primary)", whiteSpace: "pre-wrap" }}>{aiResponse}</div>
-          )}
-        </div>
       </div>
     );
   }
 
-  if (view === "person" && selected) {
-    const color = COLORS[selected.colorIdx];
-    const tcolor = TEXT_COLORS[selected.colorIdx];
-    return (
-      <div style={{ padding: "1.5rem 0" }}>
-        <h2 className="sr-only">Direct report meetings</h2>
-        <button onClick={() => { setView("list"); setSelectedId(null); setAddingMeeting(false); }} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: "var(--color-text-secondary)", fontSize: 14, padding: 0, marginBottom: "1.5rem" }}>
-          <i className="ti ti-arrow-left" aria-hidden="true"></i> All directs
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: "1.5rem" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 500, color: tcolor, flexShrink: 0 }}>{getInitials(selected.name)}</div>
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontWeight: 500, fontSize: 18 }}>{selected.name}</p>
-            {selected.role && <p style={{ margin: 0, fontSize: 14, color: "var(--color-text-secondary)" }}>{selected.role}</p>}
-          </div>
-          <button onClick={exportToGoogleDocs} title="Export notes" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-secondary)", padding: 4 }} aria-label="Export notes">
-            <i className="ti ti-download" style={{ fontSize: 20 }} aria-hidden="true"></i>
+  return (
+    <div style={styles.app}>
+      <div style={styles.sidebar}>
+        <div style={styles.sidebarHeader}>
+          <span style={styles.sidebarTitle}>Directs</span>
+          <button style={styles.iconBtn} onClick={() => setAddingPerson(true)} aria-label="Add person">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <p style={{ margin: 0, fontSize: 14, color: "var(--color-text-secondary)" }}>{selected.meetings.length} meeting{selected.meetings.length !== 1 ? "s" : ""}</p>
-          <button onClick={() => setAddingMeeting(true)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <i className="ti ti-plus" aria-hidden="true"></i> New meeting
-          </button>
-        </div>
+        {addingPerson && <AddPersonForm onAdd={addPerson} onCancel={() => setAddingPerson(false)} />}
 
-        {addingMeeting && (
-          <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 16, border: "0.5px solid var(--color-border-tertiary)" }}>
-            <p style={{ margin: "0 0 10px", fontWeight: 500, fontSize: 14 }}>New meeting</p>
-            <input type="date" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} style={{ marginBottom: 10, fontSize: 14 }} />
-            <textarea
-              value={meetingNotes}
-              onChange={e => setMeetingNotes(e.target.value)}
-              placeholder="Notes from this meeting…"
-              style={{ width: "100%", minHeight: 120, fontSize: 14, lineHeight: 1.7, padding: "10px 12px", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", background: "var(--color-background-primary)", color: "var(--color-text-primary)", resize: "vertical", boxSizing: "border-box", fontFamily: "var(--font-sans)" }}
-            />
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <button onClick={addMeeting} disabled={!meetingNotes.trim()}>Save meeting</button>
-              <button onClick={() => { setAddingMeeting(false); setMeetingNotes(""); }} style={{ background: "none" }}>Cancel</button>
+        <div style={styles.personList}>
+          {directs.length === 0 && !addingPerson && (
+            <div style={{ padding: "24px 12px", color: "#aaa", fontSize: 13, textAlign: "center" }}>
+              Add your first direct report to get started.
             </div>
-          </div>
-        )}
-
-        {selected.meetings.length === 0 && !addingMeeting && (
-          <div style={{ textAlign: "center", padding: "2rem 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
-            No meetings yet. Add your first one above.
-          </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {selected.meetings.map(m => (
-            <div key={m.id} onClick={() => { setSelectedMeeting(m); setView("meeting"); setAiResponse(""); setAiPrompt(""); }} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "12px 16px", cursor: "pointer", transition: "border-color 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-border-secondary)"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border-tertiary)"}
+          )}
+          {directs.map(d => (
+            <div
+              key={d.id}
+              style={styles.personRow(d.id === selectedId)}
+              onClick={() => { setSelectedId(d.id); setSelectedMeetingId(null); setAddingMeeting(false); }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <p style={{ margin: "0 0 4px", fontWeight: 500, fontSize: 14 }}>{formatDate(m.date)}</p>
-                <i className="ti ti-arrow-right" style={{ fontSize: 16, color: "var(--color-text-secondary)" }} aria-hidden="true"></i>
+              <div style={styles.avatar(COLORS[d.colorIdx])}>{getInitials(d.name)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.name}</div>
+                <div style={{ fontSize: 12, color: "#888" }}>{d.meetings[0] ? `Last met ${formatDate(d.meetings[0].date)}` : "No meetings yet"}</div>
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{m.notes}</p>
+              <button
+                style={{ ...styles.iconBtn, opacity: 0.4 }}
+                onClick={e => { e.stopPropagation(); deletePerson(d.id); }}
+                aria-label={`Remove ${d.name}`}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
             </div>
           ))}
         </div>
       </div>
-    );
-  }
 
-  // LIST VIEW
-  return (
-    <div style={{ padding: "1.5rem 0" }}>
-      <h2 className="sr-only">1:1 meeting manager</h2>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <p style={{ margin: 0, fontSize: 18, fontWeight: 500 }}>Your directs</p>
-        <button onClick={() => setAddingPerson(true)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <i className="ti ti-plus" aria-hidden="true"></i> Add person
-        </button>
-      </div>
-
-      {addingPerson && (
-        <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 16, border: "0.5px solid var(--color-border-tertiary)" }}>
-          <p style={{ margin: "0 0 10px", fontWeight: 500, fontSize: 14 }}>Add direct report</p>
-          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Name" onKeyDown={e => e.key === "Enter" && addPerson()} style={{ marginBottom: 8, fontSize: 14, width: "100%", boxSizing: "border-box" }} />
-          <input value={newRole} onChange={e => setNewRole(e.target.value)} placeholder="Role (optional)" onKeyDown={e => e.key === "Enter" && addPerson()} style={{ marginBottom: 12, fontSize: 14, width: "100%", boxSizing: "border-box" }} />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addPerson} disabled={!newName.trim()}>Add</button>
-            <button onClick={() => { setAddingPerson(false); setNewName(""); setNewRole(""); }} style={{ background: "none" }}>Cancel</button>
+      <div style={styles.main}>
+        {!selected ? (
+          <div style={styles.emptyState}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <div>Select a direct report to view meetings</div>
           </div>
-        </div>
-      )}
-
-      {directs.length === 0 && !addingPerson && (
-        <div style={{ textAlign: "center", padding: "3rem 0", color: "var(--color-text-secondary)", fontSize: 14 }}>
-          No direct reports yet. Add someone to get started.
-        </div>
-      )}
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {directs.map(d => {
-          const color = COLORS[d.colorIdx];
-          const tcolor = TEXT_COLORS[d.colorIdx];
-          const lastMeeting = d.meetings[0];
-          return (
-            <div key={d.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "border-color 0.15s" }}
-              onClick={() => { setSelectedId(d.id); setView("person"); setAddingMeeting(false); }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--color-border-secondary)"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--color-border-tertiary)"}
-            >
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 500, color: tcolor, flexShrink: 0 }}>{getInitials(d.name)}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 500, fontSize: 15 }}>{d.name}</p>
-                <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)" }}>
-                  {d.role ? `${d.role} · ` : ""}{d.meetings.length} meeting{d.meetings.length !== 1 ? "s" : ""}
-                  {lastMeeting ? ` · Last: ${formatDate(lastMeeting.date)}` : ""}
-                </p>
-              </div>
+        ) : (
+          <>
+            <div style={styles.mainHeader}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <button onClick={e => { e.stopPropagation(); if (confirm(`Remove ${d.name}?`)) deletePerson(d.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-secondary)", padding: 4 }} aria-label={`Remove ${d.name}`}>
-                  <i className="ti ti-trash" style={{ fontSize: 16 }} aria-hidden="true"></i>
+                <div style={styles.avatarLg(COLORS[selected.colorIdx])}>{getInitials(selected.name)}</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 500 }}>{selected.name}</div>
+                  <div style={{ fontSize: 13, color: "#888" }}>
+                    {selected.role ? `${selected.role} · ` : ""}{selected.meetings.length} meeting{selected.meetings.length !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </div>
+              <div style={styles.headerActions}>
+                {selected.meetings.length > 0 && (
+                  <button style={styles.btn} onClick={exportNotes}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export
+                  </button>
+                )}
+                <button style={styles.btnPrimary} onClick={() => setAddingMeeting(true)}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  New meeting
                 </button>
-                <i className="ti ti-arrow-right" style={{ fontSize: 16, color: "var(--color-text-secondary)" }} aria-hidden="true"></i>
               </div>
             </div>
-          );
-        })}
+
+            {addingMeeting && (
+              <div style={{ padding: "20px 32px", borderBottom: "1px solid #e5e5e5", background: "#fafafa", flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                  <input type="date" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} style={{ ...styles.input, width: "auto" }} />
+                </div>
+                <textarea
+                  autoFocus
+                  value={meetingNotes}
+                  onChange={e => setMeetingNotes(e.target.value)}
+                  placeholder="Notes from this meeting…"
+                  style={{ ...styles.textarea, minHeight: 120, marginBottom: 12 }}
+                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={styles.btnPrimary} onClick={addMeeting} disabled={!meetingNotes.trim()}>Save meeting</button>
+                  <button style={styles.btnGhost} onClick={() => { setAddingMeeting(false); setMeetingNotes(""); }}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            <div style={styles.meetingList}>
+              {selected.meetings.length === 0 && !addingMeeting ? (
+                <div style={{ ...styles.emptyState, paddingTop: 60 }}>
+                  <div>No meetings yet — add one above</div>
+                </div>
+              ) : (
+                selected.meetings.map(m => (
+                  <div
+                    key={m.id}
+                    style={styles.meetingRow}
+                    onClick={() => setSelectedMeetingId(m.id)}
+                    onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
+                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                  >
+                    <div style={{ fontSize: 13, color: "#888", paddingTop: 1 }}>{formatDate(m.date)}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{formatDate(m.date)}</div>
+                      <div style={{ fontSize: 13, color: "#666", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{m.notes}</div>
+                    </div>
+                    <div style={{ color: "#ccc", paddingTop: 2 }}>
+                      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
