@@ -14,9 +14,7 @@ const COLORS = [
   { bg: "#FBEAF0", text: "#72243E" },
 ];
 
-const CLAUDE_SYSTEM = `You are a helpful assistant for a manager preparing for 1:1 meetings with direct reports. Be concise and direct. When asked to suggest agenda items or to-dos, return a JSON object in this exact format (no markdown, no preamble):
-{"agenda": ["item 1", "item 2"], "todos": ["todo 1", "todo 2"]}
-For other questions, respond in plain text.`;
+const CLAUDE_SYSTEM = `You are a helpful assistant for a manager preparing for 1:1 meetings with direct reports. Be concise and direct. When asked to suggest agenda items or to-dos, you MUST respond with ONLY a raw JSON object and nothing else - no markdown backticks, no explanation, no preamble, no text before or after: {"agenda": ["item 1", "item 2"], "todos": ["todo 1", "todo 2"]}. For other questions, respond in plain text.`;
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +143,7 @@ function RichEditor({ value, onChange, placeholder, minHeight = 120 }) {
         {toolbarBtn("underline", "U")}
         {toolbarBtn("insertUnorderedList", "• List")}
         {toolbarBtn("insertOrderedList", "1. List")}
-        {toolbarBtn("removeFormat", "Clear")}
+
       </div>
       <div
         ref={ref}
@@ -157,7 +155,7 @@ function RichEditor({ value, onChange, placeholder, minHeight = 120 }) {
         style={{
           minHeight, padding: "10px 14px", outline: "none", fontSize: 14, lineHeight: 1.7,
           color: "#111", fontFamily: "system-ui,-apple-system,sans-serif",
-          overflowY: "auto",
+          overflowY: "auto", textAlign: "left",
         }}
       />
       <style>{`[contenteditable]:empty:before { content: attr(data-placeholder); color: #bbb; pointer-events: none; }`}</style>
@@ -290,8 +288,10 @@ function AgendaPrepModal({ person, onClose, onCreate }) {
 
     try {
       const text = await callClaude(prompt);
-      const clean = text.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      // Extract JSON even if Claude wraps it in text
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found");
+      const parsed = JSON.parse(jsonMatch[0]);
       setSuggestions(parsed);
       setAgendaChecked(Object.fromEntries((parsed.agenda || []).map((_, i) => [i, true])));
       setTodosChecked(Object.fromEntries((parsed.todos || []).map((_, i) => [i, true])));
